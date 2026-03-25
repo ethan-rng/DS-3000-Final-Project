@@ -22,14 +22,3 @@
    ```bash
    python main.py
    ```
-
-## Project Structure
-
-```
-final-project/
-├── main.py              # Main script
-├── download_script.sh   # Downloads dataset (too large for GitHub)
-├── data/                # Dataset directory (gitignored)
-├── README.md
-└── .gitignore
-```
