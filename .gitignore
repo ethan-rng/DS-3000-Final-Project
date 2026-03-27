@@ -1,5 +1,7 @@
 # Dataset files (too large for GitHub)
 data/
+models/
+figures/
 *.csv
 *.tsv
 *.parquet
@@ -7,6 +9,7 @@ data/
 *.hdf5
 *.pkl
 *.pickle
+dataset/
 
 # Python
 __pycache__/

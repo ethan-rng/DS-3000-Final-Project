@@ -1,0 +1,29 @@
+
+# NOTE: install `torch` separately using the official instructions for your OS/compute
+# (see https://pytorch.org/get-started/locally/) — CPU/MPS/CUDA wheels vary by platform.
+# Example (macOS CPU/MPS or many systems):
+#   pip install torch torchvision
+
+# Core ML (left commented because platform-specific wheel is recommended)
+# torch>=2.1.0
+# torchvision>=0.16.0
+
+# Data + image I/O
+numpy>=1.24,<2
+Pillow>=9.0
+pandas>=2.0
+
+# Face detection (choose latest available on PyPI)
+facenet-pytorch==2.6.0
+
+# Training / utils
+scikit-learn>=1.2
+tqdm>=4.64
+
+# Visualization
+matplotlib>=3.6
+seaborn>=0.12
+
+# Web UI
+flask>=3.0
+

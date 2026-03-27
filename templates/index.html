@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Face the Truth — AI Face Detector</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YcnS/hYkl6PFlCuTBqLDO6FSDMO3TMggMHYb"
+        crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #6c3ce0;
+      --accent-light: #8b5cf6;
+      --accent-bg: #f3eeff;
+      --surface: #ffffff;
+      --page-bg: #f0f2f7;
+      --text-primary: #1e1e2f;
+      --text-secondary: #6b7280;
+      --text-hint: #9ca3af;
+      --border-subtle: #e5e7eb;
+      --border-input: #d1d5db;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--page-bg);
+      color: var(--text-primary);
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ════════════ Hero ════════════ */
+    .hero {
+      background: linear-gradient(135deg, #6c3ce0 0%, #4f46e5 50%, #3b82f6 100%);
+      color: #fff;
+      padding: 3rem 1.5rem 2.5rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -.6px;
+      margin: 0 0 .4rem;
+    }
+    .hero .tagline {
+      font-size: 1rem;
+      opacity: .85;
+      font-weight: 400;
+      margin: 0 auto;
+      max-width: 520px;
+      line-height: 1.5;
+    }
+
+    /* ════════════ Layout wrapper ════════════ */
+    .page-wrap {
+      max-width: 860px;
+      margin: -1.5rem auto 0;
+      padding: 0 1rem 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ════════════ Cards ════════════ */
+    .card {
+      border: 1px solid var(--border-subtle);
+      border-radius: .85rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+      background: var(--surface);
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      margin-bottom: 1.25rem;
+    }
+    .section-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: .5rem;
+      background: var(--accent-bg); color: var(--accent);
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 1.25rem 0;
+    }
+
+    /* ════════════ Form controls ════════════ */
+    .form-label {
+      font-weight: 600;
+      font-size: .72rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: .4rem;
+    }
+    .form-hint {
+      font-size: .75rem;
+      color: var(--text-hint);
+      margin-top: .3rem;
+      line-height: 1.35;
+    }
+    .form-select, .form-control {
+      border: 1px solid var(--border-input);
+      border-radius: .55rem;
+      font-size: .9rem;
+      padding: .5rem .75rem;
+      transition: border-color .15s, box-shadow .15s;
+      background-color: #fff;
+    }
+    .form-select:focus, .form-control:focus {
+      border-color: var(--accent-light);
+      box-shadow: 0 0 0 3px rgba(108,60,224,.12);
+    }
+
+    /* ════════════ Train button ════════════ */
+    .btn-accent {
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      color: #fff; border: none; border-radius: .6rem;
+      font-weight: 700; font-size: .95rem;
+      padding: .7rem 2rem;
+      letter-spacing: .2px;
+      transition: transform .12s, box-shadow .18s;
+      cursor: pointer;
+    }
+    .btn-accent:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(108,60,224,.35);
+      color: #fff;
+    }
+    .btn-accent:active:not(:disabled) { transform: translateY(0); }
+    .btn-accent:disabled { opacity: .55; cursor: not-allowed; }
+
+    /* ════════════ Status bar ════════════ */
+    .status-bar {
+      border-radius: .6rem;
+      padding: .7rem 1rem;
+      font-size: .88rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .status-bar.info    { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+    .status-bar.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-bar.danger  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .spinner-border { width: 1rem; height: 1rem; border-width: .16em; }
+
+    /* ════════════ Results table ════════════ */
+    .results-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: .6rem;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      font-size: .9rem;
+    }
+    .results-table thead th {
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      color: #fff;
+      font-weight: 700;
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      padding: .7rem 1rem;
+      border: none;
+    }
+    .results-table tbody td {
+      padding: .65rem 1rem;
+      border-top: 1px solid var(--border-subtle);
+      vertical-align: middle;
+    }
+    .results-table tbody tr:nth-child(even) td { background: #fafbfc; }
+    .results-table tbody tr:hover td { background: var(--accent-bg); }
+    .results-table .metric-name {
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    .results-table .metric-value {
+      font-weight: 800;
+      font-size: 1.05rem;
+      background: linear-gradient(135deg, var(--accent), #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .results-table .metric-desc {
+      color: var(--text-secondary);
+      font-size: .8rem;
+      line-height: 1.35;
+    }
+
+    /* ════════════ Report & table ════════════ */
+    pre.report {
+      background: #f8f9fb;
+      border: 1px solid var(--border-subtle);
+      border-radius: .5rem;
+      padding: 1rem;
+      font-size: .82rem;
+      overflow-x: auto;
+      margin: 0;
+    }
+    #cmTable { max-width: 360px; margin: 0; }
+    #cmTable th {
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    #cmTable td { font-weight: 600; font-size: .92rem; }
+
+    /* ════════════ Plots ════════════ */
+    #results-section { display: none; }
+    .plot-img {
+      max-width: 100%;
+      border-radius: .55rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08);
+      transition: transform .15s;
+    }
+    .plot-img:hover { transform: scale(1.02); }
+
+    /* ════════════ Footer ════════════ */
+    .footer {
+      text-align: center;
+      padding: 2rem 0 1rem;
+      color: var(--text-hint);
+      font-size: .78rem;
+      letter-spacing: .2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ Hero ═══ -->
+  <div class="hero">
+    <h1>🔍 Face the Truth</h1>
+    <p class="tagline">A machine learning model capable of differentiating between real and AI&#8209;generated facial images.</p>
+  </div>
+
+  <div class="page-wrap">
+
+    <!-- ═══ Config Card ═══ -->
+    <div class="card mb-4">
+      <div class="card-body p-4">
+
+        <div class="section-heading">
+          <span class="section-icon">⚙️</span>
+          <div>
+            <div class="card-title">Training Configuration</div>
+            <div class="form-hint" style="margin-top:2px">Powered by EfficientNet-B0 &mdash; adjust parameters below, then hit Train.</div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-sm-4">
+            <label for="sampleSize" class="form-label">Samples per Class</label>
+            <select id="sampleSize" class="form-select">
+              <option value="100">100</option>
+              <option value="200" selected>200</option>
+              <option value="500">500</option>
+              <option value="1000">1,000</option>
+              <option value="2000">2,000</option>
+              <option value="5000">5,000</option>
+              <option value="0">All available</option>
+            </select>
+            <div class="form-hint">Number of real &amp; fake images to train on.</div>
+          </div>
+          <div class="col-sm-4">
+            <label for="epochs" class="form-label">Epochs</label>
+            <input id="epochs" type="number" class="form-control" value="5" min="1" max="100">
+            <div class="form-hint">Full passes through the training data.</div>
+          </div>
+          <div class="col-sm-4">
+            <label for="batchSize" class="form-label">Batch Size</label>
+            <select id="batchSize" class="form-select">
+              <option value="8">8</option>
+              <option value="16">16</option>
+              <option value="32" selected>32</option>
+              <option value="64">64</option>
+            </select>
+            <div class="form-hint">Images processed per gradient update.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Train button — centered -->
+        <div class="text-center">
+          <button id="trainBtn" class="btn btn-accent" onclick="startTraining()">
+            🚀&ensp;Start Training
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ Status Bar ═══ -->
+    <div id="statusBar" class="status-bar mb-4" role="status" style="display:none!important">
+      <span id="statusIcon"></span>
+      <span id="statusText">Ready</span>
+    </div>
+
+    <!-- ═══ Results ═══ -->
+    <div id="results-section">
+
+      <!-- Key Metrics Table -->
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <div class="section-heading" style="margin-bottom:.75rem">
+            <span class="section-icon">📊</span>
+            <div class="card-title">Key Performance Metrics</div>
+          </div>
+          <div class="table-responsive">
+            <table class="results-table" id="metricsTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report + Confusion side by side -->
+      <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+          <div class="card h-100">
+            <div class="card-body p-4">
+              <div class="section-heading" style="margin-bottom:.75rem">
+                <span class="section-icon">📋</span>
+                <div class="card-title">Classification Report</div>
+              </div>
+              <pre class="report" id="classReport"></pre>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="card h-100">
+            <div class="card-body p-4">
+              <div class="section-heading" style="margin-bottom:.75rem">
+                <span class="section-icon">🔢</span>
+                <div class="card-title">Confusion Matrix</div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-bordered text-center mb-0" id="cmTable"></table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plots -->
+      <div class="section-heading">
+        <span class="section-icon">📈</span>
+        <div class="card-title">Visualizations</div>
+      </div>
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card h-100"><div class="card-body text-center p-3">
+            <h6 class="card-title mb-2" style="font-size:.85rem">Training History</h6>
+            <img id="plotHistory" class="plot-img" src="" alt="Training History">
+          </div></div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100"><div class="card-body text-center p-3">
+            <h6 class="card-title mb-2" style="font-size:.85rem">Confusion Matrix</h6>
+            <img id="plotCM" class="plot-img" src="" alt="Confusion Matrix">
+          </div></div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100"><div class="card-body text-center p-3">
+            <h6 class="card-title mb-2" style="font-size:.85rem">ROC Curve</h6>
+            <img id="plotROC" class="plot-img" src="" alt="ROC Curve">
+          </div></div>
+        </div>
+      </div>
+
+    </div><!-- /results-section -->
+
+    <div class="footer">DS-3000 Final Project &middot; Real vs AI-Generated Face Detection</div>
+  </div><!-- /page-wrap -->
+
+<script>
+const trainBtn   = document.getElementById('trainBtn');
+const statusBar  = document.getElementById('statusBar');
+const statusIcon = document.getElementById('statusIcon');
+const statusText = document.getElementById('statusText');
+let pollTimer = null;
+
+function showStatus(type, icon, text) {
+  statusBar.setAttribute('style', '');
+  statusBar.className = `status-bar ${type} mb-4`;
+  statusIcon.innerHTML = icon;
+  statusText.textContent = text;
+}
+
+async function startTraining() {
+  const payload = {
+    max_samples: parseInt(document.getElementById('sampleSize').value),
+    backbone:    'efficientnet_b0',
+    epochs:      parseInt(document.getElementById('epochs').value),
+    batch_size:  parseInt(document.getElementById('batchSize').value),
+  };
+
+  trainBtn.disabled = true;
+  document.getElementById('results-section').style.display = 'none';
+  showStatus('info', '<span class="spinner-border text-info"></span>', 'Starting training\u2026');
+
+  try {
+    const res = await fetch('/api/train', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showStatus('danger', '\u26A0\uFE0F', data.error || 'Failed to start training.');
+      trainBtn.disabled = false;
+      return;
+    }
+    pollTimer = setInterval(pollStatus, 2000);
+  } catch (err) {
+    showStatus('danger', '\u26A0\uFE0F', 'Network error: ' + err.message);
+    trainBtn.disabled = false;
+  }
+}
+
+async function pollStatus() {
+  try {
+    const res  = await fetch('/api/status');
+    const data = await res.json();
+
+    if (data.status === 'training') {
+      let msg = `Training\u2026 Epoch ${data.epoch} / ${data.total_epochs}`;
+      if (data.train_loss !== null) msg += `  \u2014  loss: ${data.train_loss.toFixed(4)}`;
+      if (data.val_metrics) msg += `  |  AUC: ${data.val_metrics.auc.toFixed(4)}`;
+      showStatus('info', '<span class="spinner-border text-info"></span>', msg);
+    }
+    else if (data.status === 'complete') {
+      clearInterval(pollTimer);
+      showStatus('success', '\u2705', 'Training complete!');
+      trainBtn.disabled = false;
+      renderResults(data.test_metrics);
+    }
+    else if (data.status === 'error') {
+      clearInterval(pollTimer);
+      showStatus('danger', '\u26A0\uFE0F', 'Training failed \u2014 see server console for details.');
+      trainBtn.disabled = false;
+    }
+  } catch (e) { /* network hiccup */ }
+}
+
+function renderResults(m) {
+  if (!m) return;
+  document.getElementById('results-section').style.display = '';
+
+  const metrics = [
+    { name: 'Accuracy',  val: m.accuracy,  desc: 'Overall percentage of correct predictions (real + fake).' },
+    { name: 'Precision', val: m.precision, desc: 'Of all images predicted real, how many truly were real. High precision = fewer false positives.' },
+    { name: 'Recall',    val: m.recall,    desc: 'Of all truly real images, how many the model caught. High recall = fewer false negatives.' },
+    { name: 'F1 Score',  val: m.f1,        desc: 'Harmonic mean of Precision & Recall — balances both into one number.' },
+    { name: 'AUC-ROC',   val: m.auc,       desc: 'Area under the ROC curve — measures separability across all thresholds. 1.0 = perfect, 0.5 = random.' },
+  ];
+
+  let tableHtml = `<thead><tr>
+    <th style="width:22%">Metric</th>
+    <th style="width:14%;text-align:center">Value</th>
+    <th>What It Tells Us</th>
+  </tr></thead><tbody>`;
+  metrics.forEach(d => {
+    tableHtml += `<tr>
+      <td class="metric-name">${d.name}</td>
+      <td class="metric-value">${d.val.toFixed(4)}</td>
+      <td class="metric-desc">${d.desc}</td>
+    </tr>`;
+  });
+  tableHtml += '</tbody>';
+  document.getElementById('metricsTable').innerHTML = tableHtml;
+
+  document.getElementById('classReport').textContent = m.classification_report || '';
+
+  if (m.confusion_matrix) {
+    const cm = m.confusion_matrix;
+    const labels = ['Fake', 'Real'];
+    let html = '<thead><tr><th></th>';
+    labels.forEach(l => html += `<th>Pred ${l}</th>`);
+    html += '</tr></thead><tbody>';
+    cm.forEach((row, i) => {
+      html += `<tr><th>Actual ${labels[i]}</th>`;
+      row.forEach(v => html += `<td>${v}</td>`);
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    document.getElementById('cmTable').innerHTML = html;
+  }
+
+  const ts = Date.now();
+  document.getElementById('plotHistory').src = `/figures/training_history.png?t=${ts}`;
+  document.getElementById('plotCM').src      = `/figures/confusion_matrix.png?t=${ts}`;
+  document.getElementById('plotROC').src     = `/figures/roc_curve.png?t=${ts}`;
+}
+</script>
+</body>
+</html>
