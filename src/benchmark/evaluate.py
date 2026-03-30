@@ -101,7 +101,7 @@ def hf_cloud_inference(filepath, repo_id):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_dir", default="dataset/Data Set 4/Data Set 4/validation", help="Directory containing real/ and fake/ subdirs")
+    parser.add_argument("--dataset_dir", default="dataset/cleaned/Data Set 4/Data Set 4/validation", help="Directory containing real/ and fake/ subdirs")
     parser.add_argument("--limit", type=int, default=10, help="Limit number of samples per class")
     args = parser.parse_args()
 

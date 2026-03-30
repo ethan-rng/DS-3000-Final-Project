@@ -6,7 +6,7 @@ show_help() {
 Usage: $(basename "$0") [options]
 
 Options:
-  -d PATH   Path to top-level dataset/ directory (default: dataset)
+  -d PATH   Path to top-level dataset/ directory (default: dataset/cleaned)
   -b NAME   Backbone name (efficientnet_b0, mobilenet_v3_large, resnet50). Default: efficientnet_b0
   -e N      Number of epochs (default: 10)
   -B N      Batch size (default: 32)
@@ -16,13 +16,13 @@ Options:
   -h        Show this help
 
 Example:
-  $(basename "$0") -d dataset -b efficientnet_b0 -e 10 -B 32 -l 1e-4 -o models
-  $(basename "$0") -d dataset -m 1000 -e 2   # quick test with 1k samples/class
+  $(basename "$0") -d dataset/cleaned -b efficientnet_b0 -e 10 -B 32 -l 1e-4 -o models
+  $(basename "$0") -d dataset/cleaned -m 1000 -e 2   # quick test with 1k samples/class
 EOF
 }
 
 # defaults
-DATASET_ROOT="dataset"
+DATASET_ROOT="dataset/cleaned"
 BACKBONE="efficientnet_b0"
 EPOCHS=10
 BATCH_SIZE=32

@@ -146,7 +146,7 @@ def train(
     if not train_files:
         raise RuntimeError(
             f"No training files found under '{dataset_root}'. "
-            "Expected layout: dataset/Data Set N/Data Set N/train/{{real,fake}}/*.jpg"
+            "Expected layout: dataset/cleaned/Data Set N/Data Set N/train/{{real,fake}}/*.jpg"
         )
 
     print(f"Training images:   {len(train_files)}")
@@ -340,8 +340,8 @@ if __name__ == "__main__":
         description="Train a real-vs-fake face binary classifier."
     )
     parser.add_argument(
-        "--dataset_root", default="dataset",
-        help="Top-level dataset/ directory containing Data Set 1-4 (default: dataset)",
+        "--dataset_root", default="dataset/cleaned",
+        help="Top-level dataset/ directory containing Data Set 1-4 (default: dataset/cleaned)",
     )
     parser.add_argument("--backbone", default="efficientnet_b0")
     parser.add_argument("--epochs", type=int, default=10)

@@ -1,6 +1,7 @@
 import argparse
 import os
 import random
+import shutil
 import concurrent.futures
 from pathlib import Path
 from io import BytesIO
@@ -26,7 +27,7 @@ def get_image_paths(directory, limit=None):
         return paths[:limit]
     return paths
 
-def apply_social_media_compression(img_path, quality_range=(50, 70)):
+def apply_social_media_compression(img_path, output_path, quality_range=(50, 70)):
     """
     Simulates WhatsApp/Instagram compression by re-encoding to JPEG at a lower quality,
     introducing block artifacts and color subsampling.
@@ -46,17 +47,13 @@ def apply_social_media_compression(img_path, quality_range=(50, 70)):
         buffer.seek(0)
         compressed_img = Image.open(buffer)
         
-        # Save back to the original format (keeping the original extension as requested)
-        # Note: We are overwriting the original file to apply the distortion in-place.
-        # If the original was PNG, it will now contain JPEG-like artifacts saved as PNG.
+        # Save back to the original format
         ext = os.path.splitext(img_path)[1].lower()
         if ext in ['.jpg', '.jpeg']:
-            # We already have the JPEG byte stream, just write it
-            with open(img_path, 'wb') as f:
+            with open(output_path, 'wb') as f:
                 f.write(buffer.getvalue())
         else:
-             # Need to save the degraded Image object back to its respective format
-             compressed_img.save(img_path)
+             compressed_img.save(output_path)
              
         return True
     except Exception as e:
@@ -89,7 +86,7 @@ def generate_moire_pattern(shape, frequency=None, angle=None):
          
     return pattern
 
-def apply_moire_effect(img_path, alpha_range=(0.05, 0.15)):
+def apply_moire_effect(img_path, output_path, alpha_range=(0.05, 0.15)):
     """
     Applies a subtle Moire effect to the image to simulate a digital screen capture.
     """
@@ -118,7 +115,7 @@ def apply_moire_effect(img_path, alpha_range=(0.05, 0.15)):
         
         # Overwrite the original
         blended_pil = Image.fromarray(blended)
-        blended_pil.save(img_path)
+        blended_pil.save(output_path)
         return True
     except Exception as e:
         print(f"Error applying moire to {img_path}: {e}")
@@ -126,20 +123,21 @@ def apply_moire_effect(img_path, alpha_range=(0.05, 0.15)):
 
 def process_image(args):
     """Worker function for threading."""
-    img_path, distortion_type = args
+    img_path, output_path, distortion_type = args
     
     if distortion_type == 1: # Compression Only
-        return apply_social_media_compression(img_path)
+        return apply_social_media_compression(img_path, output_path)
     elif distortion_type == 2: # Moire Only
-        return apply_moire_effect(img_path)
+        return apply_moire_effect(img_path, output_path)
     elif distortion_type == 3: # Moire + Compression
-        # Apply moire first (simulating capture), then compression (simulating transmission)
-        success_moire = apply_moire_effect(img_path)
+        # Apply moire first to output, then read from output and compress
+        success_moire = apply_moire_effect(img_path, output_path)
         if success_moire:
-            return apply_social_media_compression(img_path)
+            return apply_social_media_compression(output_path, output_path)
         return False
     else:
-        return True # Type 4 - No effect maybe? Or user didn't specify.
+        shutil.copy2(img_path, output_path)
+        return True # Type 4 - Just copy
 
 def main():
     parser = argparse.ArgumentParser(description="Apply distortions to deepfake dataset images.")
@@ -160,8 +158,7 @@ def main():
         np.random.seed(args.seed)
     
     if args.type == 4:
-         print("Type 4 selected: No distortions will be applied.")
-         return
+         print("Type 4 selected: Images will simply be copied without distortions.")
 
     print(f"Scanning target directory: {args.directory}")
     if not os.path.exists(args.directory):
@@ -176,10 +173,37 @@ def main():
         return
         
     print(f"Found {total_images} images to process.")
+    output_base_dir = os.path.join("dataset", "tmp") if args.limit is not None else os.path.join("dataset", "cleaned")
+    print(f"Saving output images to: {output_base_dir}/")
+    
     print(f"Applying distortion Type {args.type} using {args.threads} threads...")
     
     # Prepare arguments for the thread pool
-    worker_args = [(path, args.type) for path in image_paths]
+    worker_args = []
+    base_name = os.path.basename(os.path.normpath(args.directory))
+    for path in image_paths:
+        rel_path = os.path.relpath(path, args.directory)
+        
+        # If testing with -n, we copy original and distorted side-by-side for comparison
+        if args.limit is not None:
+            dir_name = os.path.dirname(rel_path)
+            file_name, ext = os.path.splitext(os.path.basename(rel_path))
+            
+            orig_name = f"{file_name}_original{ext}"
+            dist_name = f"{file_name}_distorted{ext}"
+            
+            output_dir = os.path.join(output_base_dir, base_name, dir_name)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            orig_out_path = os.path.join(output_dir, orig_name)
+            dist_out_path = os.path.join(output_dir, dist_name)
+            
+            shutil.copy2(path, orig_out_path)
+            worker_args.append((path, dist_out_path, args.type))
+        else:
+            output_path = os.path.join(output_base_dir, base_name, rel_path)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            worker_args.append((path, output_path, args.type))
     
     success_count = 0
     # Use ThreadPoolExecutor since file I/O and PIL operations often release the GIL
