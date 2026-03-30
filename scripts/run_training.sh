@@ -2,7 +2,10 @@
 #SBATCH --job-name=train_deepfake
 #SBATCH --output=train_%j.out
 #SBATCH --error=train_%j.err
-#SBATCH --time=04:00:00
+#SBATCH --time=01:00:00
+#SBATCH --gpus-per-node=h100:1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
 
 set -euo pipefail
 
@@ -12,7 +15,7 @@ Usage: $(basename "$0") [options]
 
 Options:
   -d PATH   Path to top-level dataset/ directory (default: dataset/cleaned)
-  -b NAME   Backbone name (efficientnet_b0, mobilenet_v3_large, resnet50). Default: efficientnet_b0
+  -t NAME   Model type (vit, denoised_cnn, efficientnet_cnn, dct_cnn). Default: efficientnet_cnn
   -e N      Number of epochs (default: 10)
   -B N      Batch size (default: 32)
   -l FLOAT  Learning rate (default: 1e-4)
@@ -21,24 +24,24 @@ Options:
   -h        Show this help
 
 Example:
-  $(basename "$0") -d dataset/cleaned -b efficientnet_b0 -e 10 -B 32 -l 1e-4 -o models
+  $(basename "$0") -d dataset/cleaned -t efficientnet_cnn -e 10 -B 32 -l 1e-4 -o models
   $(basename "$0") -d dataset/cleaned -m 1000 -e 2   # quick test with 1k samples/class
 EOF
 }
 
 # defaults
 DATASET_ROOT="dataset/cleaned"
-BACKBONE="efficientnet_b0"
+MODEL_TYPE="efficientnet_cnn"
 EPOCHS=10
 BATCH_SIZE=32
 LR=1e-4
 OUT_DIR="models"
 MAX_SAMPLES=0
 
-while getopts ":d:b:e:B:l:o:m:h" opt; do
+while getopts ":d:t:e:B:l:o:m:h" opt; do
   case ${opt} in
     d) DATASET_ROOT=${OPTARG} ;;
-    b) BACKBONE=${OPTARG} ;;
+    t) MODEL_TYPE=${OPTARG} ;;
     e) EPOCHS=${OPTARG} ;;
     B) BATCH_SIZE=${OPTARG} ;;
     l) LR=${OPTARG} ;;
@@ -54,17 +57,20 @@ cd "$REPO_ROOT"
 
 echo "Starting training"
 echo "  dataset_root: $DATASET_ROOT"
-echo "  backbone:     $BACKBONE"
+echo "  model_type:   $MODEL_TYPE"
 echo "  epochs:       $EPOCHS"
 echo "  batch_size:   $BATCH_SIZE"
 echo "  lr:           $LR"
 echo "  out_dir:      $OUT_DIR"
 echo "  max_samples:  $MAX_SAMPLES"
 
+echo "Activating virtual environment and dependencies..."
+source .venv/bin/activate
+
 # Run training (ensure you have activated your Python environment)
 python -m src.training.train \
   --dataset_root "$DATASET_ROOT" \
-  --backbone "$BACKBONE" \
+  --model_type "$MODEL_TYPE" \
   --epochs "$EPOCHS" \
   --batch_size "$BATCH_SIZE" \
   --lr "$LR" \

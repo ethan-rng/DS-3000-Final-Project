@@ -1,6 +1,6 @@
 import os
-# Force Keras 2 to prevent TimeDistributed parsing errors inside Keras 3
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
+# TensorFlow 2.19+ breaks tf_keras (Keras 2). We must use Keras 3.
+os.environ["TF_USE_LEGACY_KERAS"] = "0"
 import sys
 import glob
 import time
@@ -37,10 +37,10 @@ MODEL_CONFIGS = [
         "provider": "winstonai",
     },
     {
-        "name": "brmk/deepfake-detection-model",
+        "name": "brmk/deepfake-detection",
         "type": "keras_h5",
-        "hf_repo": "brmk/deepfake-detection-model",
-        "hf_filename": "deepfake_detection_model.h5",
+        "hf_repo": "brmk/deepfake-detection",
+        "hf_filename": "deepfake_detection_model.keras",
     },
     {
         "name": "prithivMLmods/Deep-Fake-Detector-v2-Model",
@@ -188,13 +188,13 @@ def main():
                 print(f"H5Patch Warning: Could not analyze/patch H5 configuration: {e}")
 
             print(model_path)
-            keras_model = tf.keras.models.load_model("./"+model_path, compile=False)
+            keras_model = tf.keras.models.load_model(model_path, compile=False)
             print("Loaded Keras model successfully.")
         except Exception as e:
             import traceback
             err_str = f"Failed to load Keras model: {e}\n{traceback.format_exc()}"
             print(err_str)
-            with open("debug_load_errors.txt", "a") as f:
+            with open("debug_load_errors.log", "a") as f:
                 f.write(err_str + "\n\n")
             sys.exit(1)
 

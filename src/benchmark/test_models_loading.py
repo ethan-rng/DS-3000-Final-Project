@@ -1,10 +1,13 @@
 import sys
 import os
 import torch
-# Add repository root to python path so 'src' can be imported
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
 print("Python Path:", sys.path)
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"=====================================")
+print(f"CUDA Available: {torch.cuda.is_available()}")
+print(f"Using Device:   {device}")
+print(f"=====================================\n")
 
 try:
     from src.models.vit.model import get_model as get_vit
@@ -16,15 +19,15 @@ except ImportError as e:
     sys.exit(1)
 
 print('Instantiating ViT...')
-vit = get_vit(pretrained=False)
+vit = get_vit(pretrained=False).to(device)
 print('Instantiating Denoised CNN...')
-denoised = get_denoised(pretrained=False)
+denoised = get_denoised(pretrained=False).to(device)
 print('Instantiating EfficientNet...')
-effnet = get_effnet(pretrained=False)
+effnet = get_effnet(pretrained=False).to(device)
 print('Instantiating DCT CNN...')
-dct = get_dct(pretrained=False)
+dct = get_dct(pretrained=False).to(device)
 
-x = torch.randn(2, 3, 224, 224)
+x = torch.randn(2, 3, 224, 224).to(device)
 print('Testing forwards...')
 out_vit = vit(x)
 assert out_vit.shape == (2,), f'ViT failed: {out_vit.shape}'

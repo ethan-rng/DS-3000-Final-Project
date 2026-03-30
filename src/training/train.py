@@ -7,7 +7,6 @@ confusion matrix, classification report — and saves plots to ``figures/``.
 """
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from pathlib import Path
 import time
 import argparse
@@ -201,7 +200,7 @@ def train(
         start = time.time()
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
-        for imgs, labels in pbar:
+        for batch_idx, (imgs, labels) in enumerate(pbar):
             imgs = imgs.to(device)
             labels = labels.to(device)
             optimizer.zero_grad()
@@ -222,6 +221,10 @@ def train(
             epoch_loss += loss.item() * imgs.size(0)
             n += imgs.size(0)
             pbar.set_postfix(loss=f"{epoch_loss / n:.4f}")
+            
+            # Print explicit progress every 20 batches since some terminals swallow tqdm outputs
+            if batch_idx % 20 == 0:
+                print(f"  [Epoch {epoch} | Batch {batch_idx}/{len(train_loader)}] Avg Loss: {epoch_loss / n:.4f}")
 
         epoch_loss /= n
         elapsed = time.time() - start

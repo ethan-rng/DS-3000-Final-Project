@@ -16,7 +16,8 @@ echo "Activating virtual environment and dependencies..."
 source .venv/bin/activate
 
 # Install requirements
-pip install -r requirements.txt
+pip install -r requirements.txt || true
+pip install facenet-pytorch --no-deps
 
 # Create a sub-folder inside src for benchmark (if not exists)
 mkdir -p src/benchmark
