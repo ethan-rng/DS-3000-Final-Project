@@ -27,6 +27,7 @@ _state = {
     "train_loss": None,
     "val_metrics": None,    # dict after each epoch (accuracy, precision, …)
     "test_metrics": None,   # dict after training finishes
+    "run_id": None,
     "error": None,
 }
 _lock = threading.Lock()
@@ -35,7 +36,7 @@ _lock = threading.Lock()
 def _reset_state():
     _state.update(
         status="idle", epoch=0, total_epochs=0,
-        train_loss=None, val_metrics=None, test_metrics=None, error=None,
+        train_loss=None, val_metrics=None, test_metrics=None, run_id=None, error=None,
     )
 
 
@@ -62,7 +63,7 @@ def _train_worker(dataset_root, backbone, epochs, batch_size, max_samples, out_d
             _state["status"] = "training"
             _state["total_epochs"] = epochs
 
-        test_metrics = run_train(
+        test_metrics, run_id = run_train(
             dataset_root=dataset_root,
             backbone=backbone,
             epochs=epochs,
@@ -75,6 +76,7 @@ def _train_worker(dataset_root, backbone, epochs, batch_size, max_samples, out_d
 
         with _lock:
             _state["status"] = "complete"
+            _state["run_id"] = run_id
             if test_metrics is not None:
                 _state["test_metrics"] = {
                     k: v for k, v in test_metrics.items()
@@ -87,9 +89,11 @@ def _train_worker(dataset_root, backbone, epochs, batch_size, max_samples, out_d
                         test_metrics["confusion_matrix"].tolist()
                     )
     except Exception:
+        tb = traceback.format_exc()
+        print(f"\n[Training ERROR]\n{tb}")
         with _lock:
             _state["status"] = "error"
-            _state["error"] = traceback.format_exc()
+            _state["error"] = tb
 
 
 # ── Routes ────────────────────────────────────────────────────────────────
@@ -144,6 +148,7 @@ def api_status():
             "train_loss": _state["train_loss"],
             "val_metrics": _state["val_metrics"],
             "test_metrics": _state["test_metrics"],
+            "run_id": _state["run_id"],
             "error": _state["error"],
         }
     return jsonify(payload)

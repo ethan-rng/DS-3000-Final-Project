@@ -6,7 +6,7 @@
   <title>Face the Truth — AI Face Detector</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YcnS/hYkl6PFlCuTBqLDO6FSDMO3TMggMHYb"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
         crossorigin="anonymous">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -451,7 +451,7 @@ async function pollStatus() {
       clearInterval(pollTimer);
       showStatus('success', '\u2705', 'Training complete!');
       trainBtn.disabled = false;
-      renderResults(data.test_metrics);
+      renderResults(data.test_metrics, data.run_id);
     }
     else if (data.status === 'error') {
       clearInterval(pollTimer);
@@ -461,9 +461,16 @@ async function pollStatus() {
   } catch (e) { /* network hiccup */ }
 }
 
-function renderResults(m) {
+function renderResults(m, runId) {
+  document.getElementById('results-section').style.display = 'block';
+
+  const ts = Date.now();
+  const tag = runId || ts;
+  document.getElementById('plotHistory').src = `/figures/training_history_${tag}.png?t=${ts}`;
+  document.getElementById('plotCM').src      = `/figures/confusion_matrix_${tag}.png?t=${ts}`;
+  document.getElementById('plotROC').src     = `/figures/roc_curve_${tag}.png?t=${ts}`;
+
   if (!m) return;
-  document.getElementById('results-section').style.display = '';
 
   const metrics = [
     { name: 'Accuracy',  val: m.accuracy,  desc: 'Overall percentage of correct predictions (real + fake).' },
@@ -505,10 +512,6 @@ function renderResults(m) {
     document.getElementById('cmTable').innerHTML = html;
   }
 
-  const ts = Date.now();
-  document.getElementById('plotHistory').src = `/figures/training_history.png?t=${ts}`;
-  document.getElementById('plotCM').src      = `/figures/confusion_matrix.png?t=${ts}`;
-  document.getElementById('plotROC').src     = `/figures/roc_curve.png?t=${ts}`;
 }
 </script>
 </body>
