@@ -54,25 +54,38 @@ def _progress(epoch, total_epochs, train_loss, val_metrics):
 
 
 # ── Background training thread ───────────────────────────────────────────
-def _train_worker(dataset_root, backbone, epochs, batch_size, max_samples, out_dir):
-    # Import here so Flask startup is fast even if torch is slow to load
-    from src.training.train import train as run_train
+# Models that use sklearn instead of PyTorch
+SKLEARN_MODELS = {"logistic_regression", "svm", "random_forest", "knn"}
 
+
+def _train_worker(dataset_root, backbone, epochs, batch_size, max_samples, out_dir):
     try:
         with _lock:
             _state["status"] = "training"
             _state["total_epochs"] = epochs
 
-        test_metrics = run_train(
-            dataset_root=dataset_root,
-            backbone=backbone,
-            epochs=epochs,
-            batch_size=batch_size,
-            lr=1e-4,
-            out_dir=out_dir,
-            max_samples=max_samples,
-            progress_callback=_progress,
-        )
+        if backbone in SKLEARN_MODELS:
+            from src.training.train_sklearn import train_sklearn
+            test_metrics = train_sklearn(
+                dataset_root=dataset_root,
+                model_type=backbone,
+                out_dir=out_dir,
+                max_samples=max_samples,
+                progress_callback=_progress,
+            )
+        else:
+            # Import here so Flask startup is fast even if torch is slow to load
+            from src.training.train import train as run_train
+            test_metrics = run_train(
+                dataset_root=dataset_root,
+                model_type=backbone,
+                epochs=epochs,
+                batch_size=batch_size,
+                lr=1e-4,
+                out_dir=out_dir,
+                max_samples=max_samples,
+                progress_callback=_progress,
+            )
 
         with _lock:
             _state["status"] = "complete"
@@ -144,11 +157,11 @@ def api_train():
     epochs = int(data.get("epochs", 5))
     batch_size = int(data.get("batch_size", 32))
 
-    if env == "cpu":
-        return jsonify({"error": "Cannot train on CPU."}), 400
-
     # Sanitise backbone choice
-    allowed_backbones = {"efficientnet_b0", "mobilenet_v3_large", "resnet50"}
+    allowed_backbones = {
+        "efficientnet_b0", "mobilenet_v3_large", "resnet50",
+        "logistic_regression", "svm", "random_forest", "knn",
+    }
     if backbone not in allowed_backbones:
         return jsonify({"error": f"Invalid backbone. Choose from {allowed_backbones}"}), 400
 
@@ -156,7 +169,7 @@ def api_train():
         cmd = [
             "sbatch",
             "scripts/train.sh",
-            "-d", "dataset/cleaned",
+            "-d", "dataset",
             "-b", backbone,
             "-e", str(epochs),
             "-B", str(batch_size),
@@ -174,7 +187,7 @@ def api_train():
     t = threading.Thread(
         target=_train_worker,
         kwargs=dict(
-            dataset_root="dataset/cleaned",
+            dataset_root="dataset",
             backbone=backbone,
             epochs=epochs,
             batch_size=batch_size,
@@ -205,6 +218,16 @@ def api_status():
 @app.route("/figures/<path:filename>")
 def serve_figure(filename):
     return send_from_directory(FIGURES_DIR, filename)
+
+
+@app.route("/api/eda", methods=["POST"])
+def api_eda():
+    try:
+        from src.eda import run_eda
+        result = run_eda("dataset")
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ── Main ──────────────────────────────────────────────────────────────────
