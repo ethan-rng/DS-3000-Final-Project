@@ -9,6 +9,7 @@ import os
 import threading
 import time
 import traceback
+import subprocess
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
@@ -55,7 +56,7 @@ def _progress(epoch, total_epochs, train_loss, val_metrics):
 # ── Background training thread ───────────────────────────────────────────
 def _train_worker(dataset_root, backbone, epochs, batch_size, max_samples, out_dir):
     # Import here so Flask startup is fast even if torch is slow to load
-    from src.train import train as run_train
+    from src.training.train import train as run_train
 
     try:
         with _lock:
@@ -99,6 +100,37 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/download", methods=["POST"])
+def api_download():
+    try:
+        subprocess.Popen(["bash", "scripts/download_script.sh"])
+        return jsonify({"status": "started", "message": "Dataset download started in background."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/distort", methods=["POST"])
+def api_distort():
+    try:
+        subprocess.Popen(["python", "scripts/apply_distortions.py", "dataset/raw", "3", "-t", "4"])
+        return jsonify({"status": "started", "message": "Applying distortions started in background."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/benchmark", methods=["POST"])
+def api_benchmark():
+    data = request.get_json(force=True)
+    env = data.get("env", "cpu")
+    try:
+        if env == "hpc":
+            subprocess.Popen(["sbatch", "scripts/run_benchmark.sh"])
+            return jsonify({"status": "started", "message": "Benchmark SLURM job submitted."})
+        else:
+            subprocess.Popen(["bash", "scripts/run_benchmark.sh"])
+            return jsonify({"status": "started", "message": "Benchmark started locally (CPU)."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/train", methods=["POST"])
 def api_train():
     with _lock:
@@ -106,22 +138,43 @@ def api_train():
             return jsonify({"error": "Training is already in progress."}), 409
 
     data = request.get_json(force=True)
+    env = data.get("env", "cpu")
     max_samples = int(data.get("max_samples", 200))
     backbone = data.get("backbone", "efficientnet_b0")
     epochs = int(data.get("epochs", 5))
     batch_size = int(data.get("batch_size", 32))
+
+    if env == "cpu":
+        return jsonify({"error": "Cannot train on CPU."}), 400
 
     # Sanitise backbone choice
     allowed_backbones = {"efficientnet_b0", "mobilenet_v3_large", "resnet50"}
     if backbone not in allowed_backbones:
         return jsonify({"error": f"Invalid backbone. Choose from {allowed_backbones}"}), 400
 
+    if env == "hpc":
+        cmd = [
+            "sbatch",
+            "scripts/train.sh",
+            "-d", "dataset/cleaned",
+            "-b", backbone,
+            "-e", str(epochs),
+            "-B", str(batch_size),
+            "-o", "models",
+            "-m", str(max_samples)
+        ]
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return jsonify({"status": "hpc_submitted", "message": res.stdout.strip()})
+        except subprocess.CalledProcessError as e:
+            return jsonify({"error": f"Failed to submit HPC job: {e.stderr}"}), 500
+
     _reset_state()
 
     t = threading.Thread(
         target=_train_worker,
         kwargs=dict(
-            dataset_root="dataset",
+            dataset_root="dataset/cleaned",
             backbone=backbone,
             epochs=epochs,
             batch_size=batch_size,

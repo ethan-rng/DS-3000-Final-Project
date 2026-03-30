@@ -6,6 +6,8 @@ Produces comprehensive metrics: accuracy, precision, recall, F1, AUC-ROC,
 confusion matrix, classification report — and saves plots to ``figures/``.
 """
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from pathlib import Path
 import time
 import argparse
@@ -28,13 +30,13 @@ from sklearn.metrics import (
     classification_report,
 )
 
-from src.preprocessing import (
+from src.training.preprocessing import (
     build_combined_file_list,
     FaceDataset,
     get_train_transform,
     get_eval_transform,
 )
-from src.model import get_model
+import importlib
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +128,7 @@ def _print_metrics(metrics: dict, header: str = "Evaluation") -> None:
 
 def train(
     dataset_root: str,
-    backbone: str = "efficientnet_b0",
+    model_type: str = "efficientnet_cnn",
     epochs: int = 10,
     batch_size: int = 32,
     lr: float = 1e-4,
@@ -172,7 +174,8 @@ def train(
     # ------------------------------------------------------------------
     # Model / optimizer / loss
     # ------------------------------------------------------------------
-    model = get_model(backbone=backbone).to(device)
+    model_module = importlib.import_module(f"src.models.{model_type}.model")
+    model = model_module.get_model(pretrained=True).to(device)
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=1e-2)
     criterion = nn.BCEWithLogitsLoss()
 
@@ -262,12 +265,12 @@ def train(
 
             if val_auc > best_val_auc:
                 best_val_auc = val_auc
-                ckpt_path = Path(out_dir) / f"best_{backbone}.pt"
+                ckpt_path = Path(out_dir) / f"best_{model_type}.pt"
                 torch.save(
                     {
                         "model_state": model.state_dict(),
                         "optimizer_state": optimizer.state_dict(),
-                        "backbone": backbone,
+                        "model_type": model_type,
                         "epoch": epoch,
                         "val_auc": val_auc,
                     },
@@ -281,7 +284,7 @@ def train(
     print("\n--- Post-training evaluation on TEST splits ---")
 
     # Reload best checkpoint if it exists
-    ckpt_path = Path(out_dir) / f"best_{backbone}.pt"
+    ckpt_path = Path(out_dir) / f"best_{model_type}.pt"
     if ckpt_path.exists():
         ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
         model.load_state_dict(ckpt["model_state"])
@@ -343,7 +346,7 @@ if __name__ == "__main__":
         "--dataset_root", default="dataset/cleaned",
         help="Top-level dataset/ directory containing Data Set 1-4 (default: dataset/cleaned)",
     )
-    parser.add_argument("--backbone", default="efficientnet_b0")
+    parser.add_argument("--model_type", default="efficientnet_cnn", choices=["vit", "denoised_cnn", "efficientnet_cnn", "dct_cnn"])
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-4)
@@ -356,7 +359,7 @@ if __name__ == "__main__":
 
     train(
         dataset_root=args.dataset_root,
-        backbone=args.backbone,
+        model_type=args.model_type,
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,

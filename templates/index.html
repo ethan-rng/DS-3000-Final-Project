@@ -268,6 +268,16 @@
         </div>
 
         <div class="row g-3 mb-3">
+          <div class="col-sm-12">
+            <label for="execEnv" class="form-label">Execution Environment</label>
+            <select id="execEnv" class="form-select">
+              <option value="cpu" selected>Local (CPU)</option>
+              <option value="hpc">HPC Cluster (SLURM)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
           <div class="col-sm-4">
             <label for="sampleSize" class="form-label">Samples per Class</label>
             <select id="sampleSize" class="form-select">
@@ -307,6 +317,21 @@
           </button>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ═══ Pipeline Card ═══ -->
+    <div class="card mb-4">
+      <div class="card-body p-4 text-center">
+        <div class="section-heading justify-content-center">
+          <span class="section-icon">🛠️</span>
+          <div class="card-title">Data Pipeline &amp; Utilities</div>
+        </div>
+        <div class="d-flex justify-content-center gap-3 flex-wrap mt-3">
+          <button class="btn btn-outline-secondary" onclick="runScript('/api/download')">⬇️ Download Dataset</button>
+          <button class="btn btn-outline-secondary" onclick="runScript('/api/distort')">🌀 Apply Distortions</button>
+          <button class="btn btn-outline-secondary" onclick="runScript('/api/benchmark')">⏱️ Run Benchmark</button>
+        </div>
       </div>
     </div>
 
@@ -407,6 +432,7 @@ function showStatus(type, icon, text) {
 
 async function startTraining() {
   const payload = {
+    env:         document.getElementById('execEnv').value,
     max_samples: parseInt(document.getElementById('sampleSize').value),
     backbone:    'efficientnet_b0',
     epochs:      parseInt(document.getElementById('epochs').value),
@@ -429,10 +455,35 @@ async function startTraining() {
       trainBtn.disabled = false;
       return;
     }
+    if (data.status === 'hpc_submitted') {
+      showStatus('success', '\u2705', data.message || 'HPC Job submitted successfully.');
+      trainBtn.disabled = false;
+      return;
+    }
     pollTimer = setInterval(pollStatus, 2000);
   } catch (err) {
     showStatus('danger', '\u26A0\uFE0F', 'Network error: ' + err.message);
     trainBtn.disabled = false;
+  }
+}
+
+async function runScript(endpoint) {
+  const env = document.getElementById('execEnv').value;
+  showStatus('info', '<span class="spinner-border text-info"></span>', 'Starting background job\u2026');
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ env: env }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showStatus('danger', '\u26A0\uFE0F', data.error || 'Failed to start job.');
+    } else {
+      showStatus('success', '\u2705', data.message || 'Job started successfully.');
+    }
+  } catch (err) {
+    showStatus('danger', '\u26A0\uFE0F', 'Network error: ' + err.message);
   }
 }
 

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+#SBATCH --job-name=train_deepfake
+#SBATCH --output=train_%j.out
+#SBATCH --error=train_%j.err
+#SBATCH --time=04:00:00
+
 set -euo pipefail
 
 show_help() {
@@ -57,7 +62,7 @@ echo "  out_dir:      $OUT_DIR"
 echo "  max_samples:  $MAX_SAMPLES"
 
 # Run training (ensure you have activated your Python environment)
-python -m src.train \
+python -m src.training.train \
   --dataset_root "$DATASET_ROOT" \
   --backbone "$BACKBONE" \
   --epochs "$EPOCHS" \
