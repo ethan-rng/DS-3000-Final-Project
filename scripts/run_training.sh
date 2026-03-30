@@ -2,10 +2,10 @@
 #SBATCH --job-name=train_deepfake
 #SBATCH --output=train_%j.out
 #SBATCH --error=train_%j.err
-#SBATCH --time=01:00:00
+#SBATCH --time=01:50:00
 #SBATCH --gpus-per-node=h100:1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 
 set -euo pipefail
 
@@ -65,7 +65,16 @@ echo "  out_dir:      $OUT_DIR"
 echo "  max_samples:  $MAX_SAMPLES"
 
 echo "Activating virtual environment and dependencies..."
-source .venv/bin/activate
+cd /home/ethanrng/scratch/final-project
+
+# 4. Activate your virtual environment
+if [ -f ".venv/bin/activate" ]; then
+    source .venv/bin/activate
+    pip install facenet-pytorch --no-deps
+else
+    echo "Error: Virtual environment not found in $PROJECT_ROOT/.venv"
+    exit 1
+fi
 
 # Run training (ensure you have activated your Python environment)
 python -m src.training.train \

@@ -28,3 +28,5 @@ venv/
 
 .env
 *.log
+*.out
+*.err

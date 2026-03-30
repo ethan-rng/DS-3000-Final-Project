@@ -9,6 +9,7 @@ cd "$PROJECT_ROOT"
 # 2. Activate virtual environment
 if [ -f ".venv/bin/activate" ]; then
     source .venv/bin/activate
+    pip install facenet-pytorch --no-deps
 else
     echo "Error: .venv not found. Please create it first."
     exit 1

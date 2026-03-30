@@ -286,6 +286,9 @@ def train(
     # ------------------------------------------------------------------
     print("\n--- Post-training evaluation on TEST splits ---")
 
+    run_id = int(time.time())
+    prefix = f"{model_type}_{run_id}"
+
     # Reload best checkpoint if it exists
     ckpt_path = Path(out_dir) / f"best_{model_type}.pt"
     if ckpt_path.exists():
@@ -305,7 +308,7 @@ def train(
         _print_metrics(test_metrics, header="TEST SET RESULTS")
 
         # Save metrics to JSON
-        metrics_path = Path(out_dir) / "test_metrics.json"
+        metrics_path = Path(out_dir) / f"{prefix}_test_metrics.json"
         serialisable = {
             k: v for k, v in test_metrics.items()
             if k not in ("confusion_matrix", "y_true", "y_scores")
@@ -325,14 +328,15 @@ def train(
         plot_roc_curve,
     )
 
-    plot_training_history(train_losses, val_losses, val_aucs)
+    plot_training_history(train_losses, val_losses, val_aucs, filename=f"{prefix}_training_history.png")
 
     if test_metrics is not None:
         plot_confusion_matrix(
             test_metrics["confusion_matrix"],
             class_names=["Fake", "Real"],
+            filename=f"{prefix}_confusion_matrix.png"
         )
-        plot_roc_curve(test_metrics["y_true"], test_metrics["y_scores"])
+        plot_roc_curve(test_metrics["y_true"], test_metrics["y_scores"], filename=f"{prefix}_roc_curve.png")
 
     return test_metrics
 

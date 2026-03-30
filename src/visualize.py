@@ -29,6 +29,7 @@ def plot_training_history(
     val_losses: Optional[List[float]] = None,
     val_aucs: Optional[List[float]] = None,
     save: bool = True,
+    filename: str = "training_history.png",
 ) -> None:
     """Plot training / validation loss and (optionally) validation AUC curves."""
     ncols = 2 if val_aucs else 1
@@ -59,7 +60,7 @@ def plot_training_history(
 
     if save:
         _ensure_figures_dir()
-        path = os.path.join(FIGURES_DIR, "training_history.png")
+        path = os.path.join(FIGURES_DIR, filename)
         plt.savefig(path, dpi=150)
         print(f"Saved training history plot to {path}")
     plt.close(fig)
@@ -73,6 +74,7 @@ def plot_confusion_matrix(
     cm: np.ndarray,
     class_names: Optional[List[str]] = None,
     save: bool = True,
+    filename: str = "confusion_matrix.png",
 ) -> None:
     """Plot a 2x2 confusion matrix heatmap."""
     if class_names is None:
@@ -105,7 +107,7 @@ def plot_confusion_matrix(
 
     if save:
         _ensure_figures_dir()
-        path = os.path.join(FIGURES_DIR, "confusion_matrix.png")
+        path = os.path.join(FIGURES_DIR, filename)
         plt.savefig(path, dpi=150)
         print(f"Saved confusion matrix plot to {path}")
     plt.close(fig)
@@ -119,6 +121,7 @@ def plot_roc_curve(
     y_true: np.ndarray,
     y_scores: np.ndarray,
     save: bool = True,
+    filename: str = "roc_curve.png",
 ) -> None:
     """Plot ROC curve with AUC annotation."""
     fpr, tpr, _ = roc_curve(y_true, y_scores)
@@ -137,7 +140,7 @@ def plot_roc_curve(
 
     if save:
         _ensure_figures_dir()
-        path = os.path.join(FIGURES_DIR, "roc_curve.png")
+        path = os.path.join(FIGURES_DIR, filename)
         plt.savefig(path, dpi=150)
         print(f"Saved ROC curve plot to {path}")
     plt.close(fig)

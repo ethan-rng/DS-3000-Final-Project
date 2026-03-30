@@ -11,7 +11,7 @@ huggingface-hub>=1.8.0
 
 # --- Face Detection & Deepfakes ---
 # Note: Requires --no-deps install due to metadata conflicts
-facenet-pytorch>=2.6.0
+# facenet-pytorch>=2.6.0
 
 # --- Data Science & Visualization ---
 numpy>=1.26.0
