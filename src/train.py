@@ -10,6 +10,7 @@ from pathlib import Path
 import time
 import argparse
 import json
+from datetime import datetime
 
 import numpy as np
 import torch
@@ -134,6 +135,9 @@ def train(
     max_samples: int = 0,
     progress_callback=None,
 ):
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    print(f"Run ID: {run_id}")
+
     device = _get_device()
     print(f"Using device: {device}")
 
@@ -262,7 +266,7 @@ def train(
 
             if val_auc > best_val_auc:
                 best_val_auc = val_auc
-                ckpt_path = Path(out_dir) / f"best_{backbone}.pt"
+                ckpt_path = Path(out_dir) / f"best_{backbone}_{run_id}.pt"
                 torch.save(
                     {
                         "model_state": model.state_dict(),
@@ -281,7 +285,7 @@ def train(
     print("\n--- Post-training evaluation on TEST splits ---")
 
     # Reload best checkpoint if it exists
-    ckpt_path = Path(out_dir) / f"best_{backbone}.pt"
+    ckpt_path = Path(out_dir) / f"best_{backbone}_{run_id}.pt"
     if ckpt_path.exists():
         ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
         model.load_state_dict(ckpt["model_state"])
@@ -299,7 +303,7 @@ def train(
         _print_metrics(test_metrics, header="TEST SET RESULTS")
 
         # Save metrics to JSON
-        metrics_path = Path(out_dir) / "test_metrics.json"
+        metrics_path = Path(out_dir) / f"test_metrics_{run_id}.json"
         serialisable = {
             k: v for k, v in test_metrics.items()
             if k not in ("confusion_matrix", "y_true", "y_scores")
@@ -319,16 +323,19 @@ def train(
         plot_roc_curve,
     )
 
-    plot_training_history(train_losses, val_losses, val_aucs)
+    plot_training_history(train_losses, val_losses, val_aucs, tag=run_id)
 
     if test_metrics is not None:
         plot_confusion_matrix(
             test_metrics["confusion_matrix"],
             class_names=["Fake", "Real"],
+            tag=run_id,
         )
-        plot_roc_curve(test_metrics["y_true"], test_metrics["y_scores"])
+        plot_roc_curve(test_metrics["y_true"], test_metrics["y_scores"], tag=run_id)
 
-    return test_metrics
+    if test_metrics is not None:
+        test_metrics["run_id"] = run_id
+    return test_metrics, run_id
 
 
 # ---------------------------------------------------------------------------
