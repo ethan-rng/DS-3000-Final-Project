@@ -1,7 +1,9 @@
 """
 Visualization and plotting utilities for PyTorch training results.
 
-All plots are saved to the ``figures/`` directory by default.
+All plots are saved to the ``figures/`` directory by default, or to an
+optional ``out_dir`` passed per-call (used to route outputs into
+model-specific subfolders).
 """
 import os
 from typing import List, Optional
@@ -16,8 +18,16 @@ from sklearn.metrics import roc_curve, auc
 FIGURES_DIR = os.path.join(os.path.dirname(__file__), "..", "figures")
 
 
+def _resolve_out_dir(out_dir: Optional[str]) -> str:
+    """Return *out_dir* if given, else the module-level FIGURES_DIR."""
+    d = out_dir if out_dir is not None else FIGURES_DIR
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
 def _ensure_figures_dir() -> None:
     os.makedirs(FIGURES_DIR, exist_ok=True)
+
 
 
 # ---------------------------------------------------------------------------
@@ -30,8 +40,16 @@ def plot_training_history(
     val_aucs: Optional[List[float]] = None,
     save: bool = True,
     filename: str = "training_history.png",
+    out_dir: Optional[str] = None,
 ) -> None:
-    """Plot training / validation loss and (optionally) validation AUC curves."""
+    """Plot training / validation loss and (optionally) validation AUC curves.
+
+    Parameters
+    ----------
+    out_dir : str, optional
+        Directory to write the figure into.  Falls back to the module-level
+        ``FIGURES_DIR`` when *None*.
+    """
     ncols = 2 if val_aucs else 1
     fig, axes = plt.subplots(1, ncols, figsize=(6 * ncols, 4))
     if ncols == 1:
@@ -59,8 +77,7 @@ def plot_training_history(
     plt.tight_layout()
 
     if save:
-        _ensure_figures_dir()
-        path = os.path.join(FIGURES_DIR, filename)
+        path = os.path.join(_resolve_out_dir(out_dir), filename)
         plt.savefig(path, dpi=150)
         print(f"Saved training history plot to {path}")
     plt.close(fig)
@@ -75,8 +92,16 @@ def plot_confusion_matrix(
     class_names: Optional[List[str]] = None,
     save: bool = True,
     filename: str = "confusion_matrix.png",
+    out_dir: Optional[str] = None,
 ) -> None:
-    """Plot a 2x2 confusion matrix heatmap."""
+    """Plot a 2x2 confusion matrix heatmap.
+
+    Parameters
+    ----------
+    out_dir : str, optional
+        Directory to write the figure into.  Falls back to the module-level
+        ``FIGURES_DIR`` when *None*.
+    """
     if class_names is None:
         class_names = ["Fake", "Real"]
 
@@ -106,8 +131,7 @@ def plot_confusion_matrix(
     plt.tight_layout()
 
     if save:
-        _ensure_figures_dir()
-        path = os.path.join(FIGURES_DIR, filename)
+        path = os.path.join(_resolve_out_dir(out_dir), filename)
         plt.savefig(path, dpi=150)
         print(f"Saved confusion matrix plot to {path}")
     plt.close(fig)
@@ -122,8 +146,16 @@ def plot_roc_curve(
     y_scores: np.ndarray,
     save: bool = True,
     filename: str = "roc_curve.png",
+    out_dir: Optional[str] = None,
 ) -> None:
-    """Plot ROC curve with AUC annotation."""
+    """Plot ROC curve with AUC annotation.
+
+    Parameters
+    ----------
+    out_dir : str, optional
+        Directory to write the figure into.  Falls back to the module-level
+        ``FIGURES_DIR`` when *None*.
+    """
     fpr, tpr, _ = roc_curve(y_true, y_scores)
     roc_auc = auc(fpr, tpr)
 
@@ -139,8 +171,7 @@ def plot_roc_curve(
     plt.tight_layout()
 
     if save:
-        _ensure_figures_dir()
-        path = os.path.join(FIGURES_DIR, filename)
+        path = os.path.join(_resolve_out_dir(out_dir), filename)
         plt.savefig(path, dpi=150)
         print(f"Saved ROC curve plot to {path}")
     plt.close(fig)

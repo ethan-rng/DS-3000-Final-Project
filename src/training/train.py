@@ -183,7 +183,14 @@ def train(
     scaler = torch.amp.GradScaler("cuda") if use_amp else None
 
     best_val_auc = 0.0
-    os.makedirs(out_dir, exist_ok=True)
+    # ── Output paths: model-specific subdirectories ──────────────────────
+    model_out_dir = os.path.join(out_dir, model_type)
+    os.makedirs(model_out_dir, exist_ok=True)
+    # Figures also go in a model-specific subfolder under figures/
+    fig_out_dir = os.path.join("figures", model_type)
+    os.makedirs(fig_out_dir, exist_ok=True)
+    print(f"Checkpoints & metrics → {model_out_dir}/")
+    print(f"Figures               → {fig_out_dir}/")
 
     # Per-epoch tracking for plots
     train_losses: list[float] = []
@@ -268,7 +275,7 @@ def train(
 
             if val_auc > best_val_auc:
                 best_val_auc = val_auc
-                ckpt_path = Path(out_dir) / f"best_{model_type}.pt"
+                ckpt_path = Path(model_out_dir) / f"best_{model_type}.pt"
                 torch.save(
                     {
                         "model_state": model.state_dict(),
@@ -290,7 +297,7 @@ def train(
     prefix = f"{model_type}_{run_id}"
 
     # Reload best checkpoint if it exists
-    ckpt_path = Path(out_dir) / f"best_{model_type}.pt"
+    ckpt_path = Path(model_out_dir) / f"best_{model_type}.pt"
     if ckpt_path.exists():
         ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
         model.load_state_dict(ckpt["model_state"])
@@ -308,7 +315,7 @@ def train(
         _print_metrics(test_metrics, header="TEST SET RESULTS")
 
         # Save metrics to JSON
-        metrics_path = Path(out_dir) / f"{prefix}_test_metrics.json"
+        metrics_path = Path(model_out_dir) / f"{prefix}_test_metrics.json"
         serialisable = {
             k: v for k, v in test_metrics.items()
             if k not in ("confusion_matrix", "y_true", "y_scores")
@@ -328,15 +335,24 @@ def train(
         plot_roc_curve,
     )
 
-    plot_training_history(train_losses, val_losses, val_aucs, filename=f"{prefix}_training_history.png")
+    plot_training_history(
+        train_losses, val_losses, val_aucs,
+        filename=f"{prefix}_training_history.png",
+        out_dir=fig_out_dir,
+    )
 
     if test_metrics is not None:
         plot_confusion_matrix(
             test_metrics["confusion_matrix"],
             class_names=["Fake", "Real"],
-            filename=f"{prefix}_confusion_matrix.png"
+            filename=f"{prefix}_confusion_matrix.png",
+            out_dir=fig_out_dir,
         )
-        plot_roc_curve(test_metrics["y_true"], test_metrics["y_scores"], filename=f"{prefix}_roc_curve.png")
+        plot_roc_curve(
+            test_metrics["y_true"], test_metrics["y_scores"],
+            filename=f"{prefix}_roc_curve.png",
+            out_dir=fig_out_dir,
+        )
 
     return test_metrics
 

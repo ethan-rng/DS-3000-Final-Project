@@ -1,36 +1,49 @@
 #!/bin/bash
-#SBATCH --job-name=fiba3x3_infer
-#SBATCH --output=fiba3x3_infer_%j.out
-#SBATCH --error=fiba3x3_infer_%j.err
-#SBATCH --time=02:00:00
+#SBATCH --job-name=benchmark_deepfake
+#SBATCH --output=benchmark_%j.out
+#SBATCH --error=benchmark_%j.err
+#SBATCH --time=06:00:00
 
-# Exit on error
 set -e
 
-# Setup environment
+# ── Environment ────────────────────────────────────────────────────────────
 if [ ! -d ".venv" ]; then
-    echo "Setting up virtual environment..."
     python3 -m venv .venv
 fi
-echo "Activating virtual environment and dependencies..."
 source .venv/bin/activate
+pip install -r requirements.txt -q || true
 
-# Install requirements
-pip install -r requirements.txt || true
-pip install facenet-pytorch --no-deps
+mkdir -p figures/distortion_benchmark models
 
-# Create a sub-folder inside src for benchmark (if not exists)
-mkdir -p src/benchmark
+# ── Configuration ──────────────────────────────────────────────────────────
+CLEANED_DIR="${1:-dataset/cleaned}"  # path containing Data Set 1..4
+SPLIT="${2:-test}"                   # test | validation | train
+LIMIT="${3:-500}"                    # images per class per variant (0 = no cap)
+API_BUDGET="${4:-3000}"              # max API calls per EdenAI model per variant
+OUT="models/benchmark_distortion_results.json"
 
-# Create figures directory
-mkdir -p figures
+echo ""
+echo "=== Smoke test: 10 images/class, 3 API calls/model ==="
+PYTHONPATH=. python src/benchmark/evaluate.py \
+    --cleaned_dir "$CLEANED_DIR" \
+    --split       "$SPLIT" \
+    --limit       10 \
+    --api_budget  3 \
+    --out         "models/benchmark_smoke.json" \
+    --figures_dir "figures/smoke"
 
-# First testing pass (limited images to ensure the pipeline is smooth)
-echo "Running test on a limited sample set (10 images per class) to verify functionality..."
-PYTHONPATH=. python src/benchmark/evaluate.py --dataset_dir "dataset/cleaned/Data Set 4/validation" --limit 10
+echo ""
+echo "=== Full distortion benchmark: limit=$LIMIT, api_budget=$API_BUDGET ==="
+PYTHONPATH=. python src/benchmark/evaluate.py \
+    --cleaned_dir "$CLEANED_DIR" \
+    --split       "$SPLIT" \
+    --limit       "$LIMIT" \
+    --api_budget  "$API_BUDGET" \
+    --out         "$OUT" \
+    --figures_dir "figures/distortion_benchmark" \
+    --no_download
 
-# Note: Once the limited pass is verified, we can append:
-# echo "Running complete benchmrk..."
-# PYTHONPATH=. python src/benchmark/evaluate.py --dataset_dir "dataset/cleaned/Data Set 4/validation" --limit 100 # Or full dataset size
-
-echo "Job Complete."
+echo ""
+echo "Benchmark complete."
+echo "  Results : $OUT"
+echo "  Figures : figures/distortion_benchmark/"
