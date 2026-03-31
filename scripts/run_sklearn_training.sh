@@ -44,7 +44,12 @@ while getopts ":d:t:o:m:h" opt; do
   esac
 done
 
-cd /home/ethanrng/scratch/final-project
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# On HPC nodes SLURM may change the working directory; fall back to known path
+if [ -d "/home/ethanrng/scratch/final-project" ]; then
+    REPO_ROOT="/home/ethanrng/scratch/final-project"
+fi
+cd "$REPO_ROOT"
 
 echo "=========================================="
 echo " sklearn Training Job"
