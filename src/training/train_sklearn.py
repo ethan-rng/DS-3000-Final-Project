@@ -182,8 +182,18 @@ def train_sklearn(
 
         # ── Visualizations ────────────────────────────────────────────
         from src.visualize import plot_confusion_matrix, plot_roc_curve
-        plot_confusion_matrix(cm, class_names=["Fake", "Real"])
-        plot_roc_curve(y_test, y_scores)
+        import datetime
+        _ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        plot_confusion_matrix(
+            cm,
+            class_names=["Fake", "Real"],
+            filename=f"confusion_matrix_{model_type}_{_ts}.png",
+        )
+        plot_roc_curve(
+            y_test,
+            y_scores,
+            filename=f"roc_curve_{model_type}_{_ts}.png",
+        )
     else:
         print("[sklearn] No test files found — skipping evaluation.")
 
