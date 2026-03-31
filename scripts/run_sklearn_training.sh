@@ -46,10 +46,19 @@ done
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # On HPC nodes SLURM may change the working directory; fall back to known path
-if [ -d "/home/ethanrng/scratch/final-project" ]; then
+if [ -d "/scratch/ethanrng/final-project" ]; then
+    REPO_ROOT="/scratch/ethanrng/final-project"
+elif [ -d "/home/ethanrng/scratch/final-project" ]; then
     REPO_ROOT="/home/ethanrng/scratch/final-project"
 fi
 cd "$REPO_ROOT"
+
+# Auto-detect dataset root: download_dataset.sh places data under dataset/raw/,
+# but the local workspace may have it directly under dataset/.
+if [ "$DATASET_ROOT" = "dataset" ] && [ -d "$DATASET_ROOT/raw" ] && [ ! -d "$DATASET_ROOT/Data Set 1" ]; then
+    DATASET_ROOT="$DATASET_ROOT/raw"
+    echo "Auto-detected dataset root: $DATASET_ROOT"
+fi
 
 echo "=========================================="
 echo " sklearn Training Job"
