@@ -130,8 +130,13 @@ def train_sklearn(
     print(f"[sklearn] Training finished in {elapsed:.1f}s")
 
     # ── Save model ────────────────────────────────────────────────────
-    os.makedirs(out_dir, exist_ok=True)
-    model_path = Path(out_dir) / f"best_{model_type}.pkl"
+    model_out_dir = os.path.join(out_dir, model_type)
+    os.makedirs(model_out_dir, exist_ok=True)
+    fig_out_dir = os.path.join("figures", model_type)
+    os.makedirs(fig_out_dir, exist_ok=True)
+    print(f"[sklearn] Checkpoints & metrics → {model_out_dir}/")
+    print(f"[sklearn] Figures               → {fig_out_dir}/")
+    model_path = Path(model_out_dir) / f"best_{model_type}.pkl"
     joblib.dump(model, model_path)
     print(f"[sklearn] Saved model to {model_path}")
 
@@ -171,7 +176,7 @@ def train_sklearn(
               f"AUC: {test_metrics['auc']:.4f}")
 
         # Save metrics JSON
-        metrics_path = Path(out_dir) / "test_metrics.json"
+        metrics_path = Path(model_out_dir) / "test_metrics.json"
         serialisable = {
             k: v for k, v in test_metrics.items()
             if k not in ("confusion_matrix", "y_true", "y_scores")
@@ -188,11 +193,13 @@ def train_sklearn(
             cm,
             class_names=["Fake", "Real"],
             filename=f"confusion_matrix_{model_type}_{_ts}.png",
+            out_dir=fig_out_dir,
         )
         plot_roc_curve(
             y_test,
             y_scores,
             filename=f"roc_curve_{model_type}_{_ts}.png",
+            out_dir=fig_out_dir,
         )
     else:
         print("[sklearn] No test files found — skipping evaluation.")
