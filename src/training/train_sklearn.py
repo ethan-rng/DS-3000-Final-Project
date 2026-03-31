@@ -192,3 +192,40 @@ def train_sklearn(
         progress_callback(1, 1, 0.0, test_metrics)
 
     return test_metrics
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Train a traditional ML model for real-vs-fake face classification."
+    )
+    parser.add_argument(
+        "--dataset_root", default="dataset",
+        help="Top-level dataset/ directory containing Data Set 1-4 (default: dataset)",
+    )
+    parser.add_argument(
+        "--model_type", default="random_forest",
+        choices=["logistic_regression", "svm", "random_forest", "knn"],
+        help="Which sklearn model to train (default: random_forest)",
+    )
+    parser.add_argument(
+        "--out_dir", default="models",
+        help="Directory to save the model .pkl and metrics JSON (default: models)",
+    )
+    parser.add_argument(
+        "--max_samples", type=int, default=0,
+        help="Cap per-class sample count (0 = all). Useful for quick tests.",
+    )
+    args = parser.parse_args()
+
+    train_sklearn(
+        dataset_root=args.dataset_root,
+        model_type=args.model_type,
+        out_dir=args.out_dir,
+        max_samples=args.max_samples,
+    )
