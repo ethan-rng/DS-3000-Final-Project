@@ -1,7 +1,6 @@
 # Dataset files (too large for GitHub)
 data/
 models/
-figures/
 *.csv
 *.tsv
 *.parquet
