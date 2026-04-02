@@ -29,3 +29,8 @@ venv/
 *.log
 *.out
 *.err
+
+!result.out
+!results.out
+!result.err
+!results.err

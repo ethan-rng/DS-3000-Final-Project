@@ -26,10 +26,10 @@ from src.training.preprocessing import get_eval_transform
 # ── Model registry ─────────────────────────────────────────────────────────────
 # Maps backbone name → (model_module_path, checkpoint_filename)
 MODEL_REGISTRY = {
-    "efficientnet_cnn": ("src.models.efficientnet_cnn.model", "models/efficientnet_cnn/best_efficientnet_cnn.pt"),
-    "dct_cnn":          ("src.models.dct_cnn.model",          "models/dct_cnn/best_dct_cnn.pt"),
-    "denoised_cnn":     ("src.models.denoised_cnn.model",     "models/denoised_cnn/best_denoised_cnn.pt"),
-    "vit":              ("src.models.vit.model",               "models/vit/best_vit.pt"),
+    "efficientnet_cnn": ("src.models.efficientnet_cnn.model", "models/best_efficientnet_cnn.pt"),
+    "dct_cnn":          ("src.models.dct_cnn.model",          "models/best_dct_cnn.pt"),
+    "denoised_cnn":     ("src.models.denoised_cnn.model",     "models/best_denoised_cnn.pt"),
+    "vit":              ("src.models.vit.model",               "models/best_vit.pt"),
 }
 
 ALL_BACKBONES = list(MODEL_REGISTRY.keys())

@@ -1,0 +1,35 @@
+================================================================================
+  DEEPFAKE DETECTION — INFERENCE RESULTS
+  Images: assets/fake3.jpg (AI-generated) vs assets/real1.jpeg (real)
+================================================================================
+
+IMAGE: fake3.jpg (expected: AI-GENERATED)
+--------------------------------------------------------------------------------
+Model               Prediction            Confidence   P(real)   P(fake)
+---------------------------------------------------------------------------
+efficientnet_cnn    AI-GENERATED / FAKE   100.0%        0.0%     100.0%
+dct_cnn             AI-GENERATED / FAKE    99.8%        0.2%      99.8%
+denoised_cnn        AI-GENERATED / FAKE   100.0%        0.0%     100.0%
+vit                 AI-GENERATED / FAKE   100.0%        0.0%     100.0%
+random_forest       AI-GENERATED / FAKE     N/A        26.0%      74.0%
+knn                 AI-GENERATED / FAKE     N/A         0.0%     100.0%
+svm                 AI-GENERATED / FAKE     N/A        28.2%      71.8%
+
+IMAGE: real1.jpeg (expected: REAL)
+--------------------------------------------------------------------------------
+Model               Prediction            Confidence   P(real)   P(fake)
+---------------------------------------------------------------------------
+efficientnet_cnn    REAL                  100.0%      100.0%       0.0%
+dct_cnn             REAL                   66.4%       66.4%      33.6%
+denoised_cnn        REAL                   85.7%       85.7%      14.3%
+vit                 REAL                   96.4%       96.4%       3.6%
+random_forest       REAL                    N/A        56.0%      44.0%
+knn                 AI-GENERATED / FAKE     N/A         0.0%     100.0%  ← incorrect
+svm                 AI-GENERATED / FAKE     N/A        48.3%      51.7%  ← incorrect
+
+================================================================================
+  SUMMARY
+  - All 7 models correctly classified fake3.jpg as AI-GENERATED
+  - PyTorch models (4/4) correctly classified real1.jpeg as REAL
+  - Sklearn models: random_forest correct, knn and svm misclassified real1.jpeg
+================================================================================

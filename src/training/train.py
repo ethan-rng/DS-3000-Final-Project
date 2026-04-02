@@ -156,7 +156,7 @@ def train(
     train_ds = FaceDataset(train_files, transform=get_train_transform())
     val_ds = FaceDataset(val_files, transform=get_eval_transform()) if val_files else None
 
-    num_workers = 0 if device.type == "mps" else 4
+    num_workers = 0 if device.type == "mps" else 
     train_loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,
         num_workers=num_workers, pin_memory=(device.type == "cuda"),
@@ -178,9 +178,10 @@ def train(
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=1e-2)
     criterion = nn.BCEWithLogitsLoss()
 
-    # Mixed-precision scaler (CUDA only)
+    # Mixed-precision: bfloat16 on CUDA (H100 native, no scaler needed)
     use_amp = device.type == "cuda"
-    scaler = torch.amp.GradScaler("cuda") if use_amp else None
+    # BF16 has the same dynamic range as FP32 — no GradScaler required
+    scaler = None
 
     best_val_auc = 0.0
     # ── Output paths: model-specific subdirectories ──────────────────────
@@ -213,12 +214,11 @@ def train(
             optimizer.zero_grad()
 
             if use_amp:
-                with torch.amp.autocast("cuda"):
+                with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                     logits = model(imgs)
                     loss = criterion(logits, labels)
-                scaler.scale(loss).backward()
-                scaler.step(optimizer)
-                scaler.update()
+                loss.backward()
+                optimizer.step()
             else:
                 logits = model(imgs)
                 loss = criterion(logits, labels)
@@ -237,6 +237,16 @@ def train(
         elapsed = time.time() - start
         train_losses.append(epoch_loss)
         print(f"Epoch {epoch}/{epochs} — train loss: {epoch_loss:.4f} — {elapsed:.1f}s")
+
+        # ── Per-epoch training history figure (overwrites each epoch) ─────
+        from src.visualize import plot_training_history
+        plot_training_history(
+            train_losses,
+            val_losses if val_losses else None,
+            val_aucs if val_aucs else None,
+            filename="training_history_live.png",
+            out_dir=fig_out_dir,
+        )
 
         # Notify caller of progress (used by web UI)
         if progress_callback is not None:
@@ -269,6 +279,29 @@ def train(
                 f"R: {val_metrics['recall']:.4f}  "
                 f"F1: {val_metrics['f1']:.4f}"
             )
+
+            # ── Per-epoch running metrics JSON (overwrites each epoch) ────
+            running_metrics = {
+                "model_type": model_type,
+                "epochs_completed": epoch,
+                "total_epochs": epochs,
+                "train_losses": train_losses,
+                "val_losses": val_losses,
+                "val_aucs": val_aucs,
+                "latest_val": {
+                    "accuracy": val_metrics["accuracy"],
+                    "precision": val_metrics["precision"],
+                    "recall": val_metrics["recall"],
+                    "f1": val_metrics["f1"],
+                    "auc": val_metrics["auc"],
+                    "confusion_matrix": val_metrics["confusion_matrix"].tolist(),
+                },
+                "best_val_auc": best_val_auc,
+            }
+            running_path = Path(model_out_dir) / "running_metrics.json"
+            with open(running_path, "w") as _f:
+                json.dump(running_metrics, _f, indent=2)
+            print(f"  >> Updated running metrics: {running_path}")
 
             if progress_callback is not None:
                 progress_callback(epoch, epochs, epoch_loss, val_metrics)

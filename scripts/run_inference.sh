@@ -47,7 +47,7 @@ fi
 export PYTHONPATH="$(pwd):$PYTHONPATH"
 
 # Build the command
-CMD="python predict.py \"$IMAGE_FILE\""
+CMD="python -m src.inferencing.predict \"$IMAGE_FILE\""
 
 if [ -n "$MODEL_FILE" ]; then
     CMD="$CMD --model \"$MODEL_FILE\""

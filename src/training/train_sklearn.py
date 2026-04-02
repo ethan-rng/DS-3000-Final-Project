@@ -18,7 +18,8 @@ from typing import List, Tuple, Optional, Callable
 import numpy as np
 from PIL import Image
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import (
@@ -61,11 +62,14 @@ def extract_features(
 # ── Model factory ─────────────────────────────────────────────────────────
 
 _MODEL_BUILDERS = {
+    # lbfgs is much faster than saga on large dense feature matrices
     "logistic_regression": lambda: LogisticRegression(
-        max_iter=1000, solver="saga", C=1.0, n_jobs=-1,
+        max_iter=1000, solver="lbfgs", C=1.0, multi_class="auto",
     ),
-    "svm": lambda: SVC(
-        kernel="rbf", probability=True, C=1.0,
+    # LinearSVC avoids the O(N^2) kernel matrix that causes OOM with full RBF SVC.
+    # CalibratedClassifierCV adds predict_proba() so AUC scoring still works.
+    "svm": lambda: CalibratedClassifierCV(
+        LinearSVC(max_iter=5000, C=1.0),
     ),
     "random_forest": lambda: RandomForestClassifier(
         n_estimators=100, n_jobs=-1, random_state=42,
